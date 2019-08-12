@@ -1,4 +1,4 @@
-var mysql = require('mysql');
+var mysql = require("mysql");
 
 var con = mysql.createConnection({
   host: "localhost",
@@ -7,8 +7,8 @@ var con = mysql.createConnection({
   database: "filedrop"
 });
 
-con.connect(function (err){
-    if(err) throw err;
+con.connect(function(err) {
+  if (err) throw err;
 });
 
 module.exports = con;
