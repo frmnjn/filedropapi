@@ -1,6 +1,7 @@
 const express = require("express");
 var cors = require("cors");
 const AWS = require("aws-sdk");
+var mysql = require("mysql");
 const bodyParser = require("body-parser");
 const bcrypt = require("bcrypt");
 var multer = require("multer");
@@ -9,8 +10,16 @@ const saltRounds = 10;
 let jwt = require("jsonwebtoken");
 let config = require("./config");
 let middleware = require("./middleware");
-var connection = require("./conn");
 var s3 = new AWS.S3();
+
+var connection = mysql.createConnection({
+  host: "localhost",
+  user: "root",
+  password: "",
+  database: "filedrop"
+});
+
+connection.connect();
 
 class HandlerGenerator {
   login(req, res) {
