@@ -62,6 +62,27 @@ class HandlerGenerator {
     }
   }
 
+  editaccount(req, res) {
+    let id = req.body.id;
+    let name = req.body.name;
+    let username = req.body.username;
+    let email = req.body.email;
+
+    connection.query(
+      "UPDATE `user` SET `name` = ?,`username` = ?,`email` = ? WHERE `id` = ?",
+      [name, username, email, id],
+      function(error, results, fields) {
+        if (error) throw error;
+        console.log(results);
+        res.json({
+          success: true,
+          message: "Account Updated",
+          results: results
+        });
+      }
+    );
+  }
+
   register(req, res) {
     let name = req.body.name;
     let username = req.body.username;
@@ -224,7 +245,8 @@ function main() {
   });
   app.post("/createdroplink", middleware.checkToken, handlers.createdroplink);
   app.post("/getdroplinks", middleware.checkToken, handlers.getdroplinks);
-  app.post("/getlistfiles", handlers.getlistfiles);
+  app.post("/getlistfiles", middleware.checkToken, handlers.getlistfiles);
+  app.post("/editaccount", middleware.checkToken, handlers.editaccount);
   app.listen(port, () => console.log(`Server is listening on port: ${port}`));
 }
 
