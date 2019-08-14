@@ -3,7 +3,7 @@ var cors = require("cors");
 const AWS = require("aws-sdk");
 var mysql = require("mysql");
 const bodyParser = require("body-parser");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 var multer = require("multer");
 var multerS3 = require("multer-s3");
 const saltRounds = 10;
@@ -133,6 +133,32 @@ class HandlerGenerator {
     );
   }
 
+  getdroplinks(req, res) {
+    let ownerId = req.body.ownerId;
+
+    connection.query(
+      "SELECT id,name FROM `droplink` WHERE `ownerId` = ?",
+      [ownerId],
+      function(error, results, fields) {
+        if (error) throw error;
+        //console.log(results);
+        if (results[0] != null) {
+          res.json({
+            success: true,
+            droplinks: results
+          });
+        } else {
+          res.json({
+            success: false,
+            message: "There are no droplinks"
+          });
+        }
+      }
+    );
+  }
+
+  getlistfiles(req, res) {}
+
   index(req, res) {
     res.json({
       success: true,
@@ -196,8 +222,9 @@ function main() {
       data: req.files
     });
   });
-  app.post("/createdroplink", handlers.createdroplink);
-
+  app.post("/createdroplink", middleware.checkToken, handlers.createdroplink);
+  app.post("/getdroplinks", middleware.checkToken, handlers.getdroplinks);
+  app.post("/getlistfiles", handlers.getlistfiles);
   app.listen(port, () => console.log(`Server is listening on port: ${port}`));
 }
 
