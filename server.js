@@ -18,7 +18,7 @@ class HandlerGenerator {
     let password = req.body.password;
     if (username && password) {
       connection.query(
-        "SELECT * FROM `user` WHERE `username` = ?",
+        "SELECT `id`,`name`,`username`,`email` FROM `user` WHERE `username` = ?",
         [username],
         function(error, results, fields) {
           if (error) throw error;
@@ -101,6 +101,29 @@ class HandlerGenerator {
     );
   }
 
+  checkdroplink(req, res) {
+    let username = req.body.username;
+    let folder = req.body.droplink;
+
+    connection.query(
+      "SELECT 1 FROM `droplink` WHERE `name` = ? AND `ownerId`= (SELECT id from user where `username`= ?)",
+      [folder, username],
+      function(error, results, fields) {
+        if (error) throw error;
+        //console.log(results);
+        if (results[0] != null) {
+          res.json({
+            success: true
+          });
+        } else {
+          res.json({
+            success: false
+          });
+        }
+      }
+    );
+  }
+
   index(req, res) {
     res.json({
       success: true,
@@ -152,6 +175,7 @@ function main() {
   app.post("/login", handlers.login);
   app.post("/register", handlers.register);
   app.get("/checkToken", middleware.checkToken, handlers.index);
+  app.post("/checkdroplink", handlers.checkdroplink);
   app.post("/drop/:username/:dropLink", upload.array("file", 3), function(
     req,
     res,
