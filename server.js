@@ -15,7 +15,7 @@ var s3 = new AWS.S3();
 var connection = mysql.createConnection({
   host: "localhost",
   user: "root",
-  password: "",
+  password: "barcelona",
   database: "filedrop"
 });
 
@@ -178,7 +178,31 @@ class HandlerGenerator {
     );
   }
 
-  getlistfiles(req, res) {}
+  getlistfiles(req, res) {
+    var params = {
+      Bucket: "halohalohalo",
+      // Delimiter: "azizmln/"
+      Prefix: req.body.username + "/" + req.body.folder + "/"
+    };
+
+    console.log(params);
+
+    s3.listObjects(params, function(err, data) {
+      if (err) {
+        return "There was an error viewing your album: " + err.message;
+      } else {
+        // console.log(data);
+        // console.log(data.Contents, "<<<all content");
+        res.json({
+          data: data.Contents
+        });
+
+        data.Contents.forEach(function(obj, index) {
+          console.log(obj.Key, "<<<file path");
+        });
+      }
+    });
+  }
 
   index(req, res) {
     res.json({
@@ -245,8 +269,10 @@ function main() {
   });
   app.post("/createdroplink", middleware.checkToken, handlers.createdroplink);
   app.post("/getdroplinks", middleware.checkToken, handlers.getdroplinks);
-  app.post("/getlistfiles", middleware.checkToken, handlers.getlistfiles);
+  app.post("/getlistfiles", handlers.getlistfiles);
   app.post("/editaccount", middleware.checkToken, handlers.editaccount);
+  app.post("");
+
   app.listen(port, () => console.log(`Server is listening on port: ${port}`));
 }
 
