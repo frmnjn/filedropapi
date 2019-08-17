@@ -115,18 +115,25 @@ class HandlerGenerator {
   }
 
   createdroplink(req, res) {
-    let ownerId = req.body.ownerId;
+    let ownerUsername = req.body.ownerUsername;
     let dropLinkName = req.body.dropLinkName;
     connection.query(
-      "INSERT INTO `droplink` (ownerId, name) VALUES(?, ?);",
-      [ownerId, dropLinkName],
+      "INSERT INTO `droplink` (ownerUsername, name) VALUES(?, ?);",
+      [ownerUsername, dropLinkName],
       function(error, results, fields) {
-        if (error) throw error;
-        console.log(results);
-        res.json({
-          success: true,
-          message: "Create Drop Link successful!"
-        });
+        if (error) {
+          console.log(error);
+          res.json({
+            success: false,
+            message: error
+          });
+        } else {
+          console.log(results);
+          res.json({
+            success: true,
+            message: "Create Drop Link successful!"
+          });
+        }
       }
     );
   }
