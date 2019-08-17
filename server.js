@@ -15,7 +15,7 @@ var s3 = new AWS.S3();
 var connection = mysql.createConnection({
   host: "localhost",
   user: "root",
-  password: "barcelona",
+  password: "",
   database: "filedrop"
 });
 
@@ -132,11 +132,11 @@ class HandlerGenerator {
   }
 
   checkdroplink(req, res) {
-    let username = req.body.username;
+    let username = req.body.ownerUsername;
     let folder = req.body.droplink;
 
     connection.query(
-      "SELECT 1 FROM `droplink` WHERE `name` = ? AND `ownerId`= (SELECT id from user where `username`= ?)",
+      "SELECT 1 FROM `droplink` WHERE `name` = ? AND `ownerUsername`= ?",
       [folder, username],
       function(error, results, fields) {
         if (error) throw error;
@@ -155,11 +155,11 @@ class HandlerGenerator {
   }
 
   getdroplinks(req, res) {
-    let ownerId = req.body.ownerId;
+    let ownerUsername = req.body.ownerUsername;
 
     connection.query(
-      "SELECT id,name FROM `droplink` WHERE `ownerId` = ?",
-      [ownerId],
+      "SELECT id,name FROM `droplink` WHERE `ownerUsername` = ?",
+      [ownerUsername],
       function(error, results, fields) {
         if (error) throw error;
         //console.log(results);
@@ -210,6 +210,20 @@ class HandlerGenerator {
       message: "Index page"
     });
   }
+
+  test(req, res) {
+    // const options = {
+    //   Bucket: s3Bucket,
+    //   Key: "frmnjn/uhuy/1565921286179-arsi.png"
+    //   //Expires: 3600, // one hour expires.
+    // };
+
+    // const url = s3.getSignedUrl("getObject", options);
+    const url =
+      "http://d31dnmp7lgwbvu.cloudfront.net/frmnjn/uhuy/1565921286179-arsi.png";
+
+    res.redirect(url);
+  }
 }
 
 // Starting point of the server
@@ -251,6 +265,17 @@ function main() {
     })
   });
 
+  var storageLocal = multer.diskStorage({
+    destination: function(req, file, cb) {
+      cb(null, "./uploads");
+    },
+    filename: function(req, file, cb) {
+      cb(null, Date.now() + "-" + file.originalname);
+    }
+  });
+
+  var uploadLocal = multer({ storage: storageLocal });
+
   // Routes & Handlers
   app.post("/login", handlers.login);
   app.post("/register", handlers.register);
@@ -267,11 +292,25 @@ function main() {
       data: req.files
     });
   });
-  app.post("/createdroplink", middleware.checkToken, handlers.createdroplink);
-  app.post("/getdroplinks", middleware.checkToken, handlers.getdroplinks);
+  app.post("/createdroplink", handlers.createdroplink);
+  app.post("/getdroplinks", handlers.getdroplinks);
   app.post("/getlistfiles", handlers.getlistfiles);
-  app.post("/editaccount", middleware.checkToken, handlers.editaccount);
-  app.post("");
+  app.post("/editaccount", handlers.editaccount);
+  app.get("/test", handlers.test);
+  app.post(
+    "/uploadmultiple",
+    uploadLocal.array("file", 12),
+    (req, res, next) => {
+      const files = req.files;
+      if (!files) {
+        const error = new Error("Please choose files");
+        error.httpStatusCode = 400;
+        return next(error);
+      }
+
+      res.send(files);
+    }
+  );
 
   app.listen(port, () => console.log(`Server is listening on port: ${port}`));
 }
