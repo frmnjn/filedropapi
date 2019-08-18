@@ -140,6 +140,54 @@ class HandlerGenerator {
     );
   }
 
+  deletedroplink(req, res) {
+    let id = req.body.id;
+    let ownerUsername = req.body.ownerUsername;
+    let dropLinkName = req.body.dropLinkName;
+
+    var params = {
+      Bucket: "frmnjn-filedrop",
+      Prefix: ownerUsername + "/" + dropLinkName + "/"
+    };
+
+    console.log(params);
+
+    s3.listObjects(params, function(err, data) {
+      if (err) {
+        res.json({
+          data: err.message,
+          success: false
+        });
+      } else {
+        if (data.Contents[0] != null) {
+          res.json({
+            success: false,
+            message: "delete droplink failed, data exists"
+          });
+        } else {
+          connection.query("DELETE from droplink WHERE id=?", [id], function(
+            error,
+            results,
+            fields
+          ) {
+            if (error) {
+              console.log(error);
+              res.json({
+                success: false,
+                message: error
+              });
+            } else {
+              res.json({
+                success: true,
+                message: "Delete Drop Link successful!"
+              });
+            }
+          });
+        }
+      }
+    });
+  }
+
   checkdroplink(req, res) {
     let username = req.body.ownerUsername;
     let folder = req.body.droplink;
@@ -167,7 +215,7 @@ class HandlerGenerator {
     let ownerUsername = req.body.ownerUsername;
 
     connection.query(
-      "SELECT id,name FROM `droplink` WHERE `ownerUsername` = ?",
+      "SELECT * FROM `droplink` WHERE `ownerUsername` = ?",
       [ownerUsername],
       function(error, results, fields) {
         if (error) throw error;
@@ -373,6 +421,7 @@ function main() {
     });
   });
   app.post("/createdroplink", handlers.createdroplink);
+  app.delete("/deletedroplink", handlers.deletedroplink);
   app.post("/getdroplinks", handlers.getdroplinks);
   app.post("/getlistfiles", handlers.getlistfiles);
   app.post("/editaccount", handlers.editaccount);
