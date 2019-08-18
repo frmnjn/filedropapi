@@ -190,7 +190,6 @@ class HandlerGenerator {
   getlistfiles(req, res) {
     var params = {
       Bucket: "frmnjn-filedrop",
-      // Delimiter: "azizmln/"
       Prefix: req.body.username + "/" + req.body.folder + "/"
     };
 
@@ -198,17 +197,24 @@ class HandlerGenerator {
 
     s3.listObjects(params, function(err, data) {
       if (err) {
-        return "There was an error viewing your album: " + err.message;
-      } else {
-        // console.log(data);
-        // console.log(data.Contents, "<<<all content");
         res.json({
-          data: data.Contents
+          data: err.message,
+          success: false
         });
-
-        data.Contents.forEach(function(obj, index) {
-          console.log(obj.Key, "<<<file path");
-        });
+      } else {
+        if (data.Contents[0] != null) {
+          res.json({
+            data: data.Contents,
+            success: true
+          });
+          console.log("found ", data.Contents.length, " data");
+        } else {
+          res.json({
+            data: "there is no data",
+            success: false
+          });
+          console.log("found ", data.Contents.length, " data");
+        }
       }
     });
   }
@@ -270,16 +276,27 @@ class HandlerGenerator {
 
   deleteAllfiles(req, res) {
     var params = {
-      Bucket: "frmnjn-filedrop",
-      // Key: req.body.Key,
-      Prefix: "frmnjn/lalala/"
+      Bucket: "frmnjn-filedrop" /* required */,
+      Delete: {
+        /* required */
+        Objects: req.body.Key,
+        Quiet: true || false
+      }
     };
 
-    s3.deleteObject(params, function(err, data) {
-      if (err) console.log(err, err.stack);
-      else {
-        console.log(data);
-        res.json({ success: true, data: data });
+    s3.deleteObjects(params, function(err, data) {
+      if (err) {
+        console.log(err, err.stack);
+        res.json({
+          success: false,
+          message: err
+        });
+      } else {
+        console.log(params.Delete.Objects.length, " deleted"); // successful response
+        res.json({
+          success: true,
+          message: params.Delete.Objects.length + " deleted"
+        });
       }
     });
   }
