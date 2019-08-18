@@ -11,6 +11,8 @@ let jwt = require("jsonwebtoken");
 let config = require("./config");
 let middleware = require("./middleware");
 var s3 = new AWS.S3();
+var S3Zipper = require("aws-s3-zipper");
+var zipper = new S3Zipper({ bucket: "frmnjn-filedrop" });
 
 var connection = mysql.createConnection({
   host: "localhost",
@@ -187,7 +189,7 @@ class HandlerGenerator {
 
   getlistfiles(req, res) {
     var params = {
-      Bucket: "halohalohalo",
+      Bucket: "frmnjn-filedrop",
       // Delimiter: "azizmln/"
       Prefix: req.body.username + "/" + req.body.folder + "/"
     };
@@ -218,18 +220,68 @@ class HandlerGenerator {
     });
   }
 
-  test(req, res) {
-    // const options = {
-    //   Bucket: s3Bucket,
-    //   Key: "frmnjn/uhuy/1565921286179-arsi.png"
-    //   //Expires: 3600, // one hour expires.
-    // };
+  downloadsinglefile(req, res) {
+    const options = {
+      Bucket: "frmnjn-filedrop",
+      Key: req.body.Key,
+      Expires: 60 // one hour expires.
+    };
 
-    // const url = s3.getSignedUrl("getObject", options);
-    const url =
-      "http://d31dnmp7lgwbvu.cloudfront.net/frmnjn/uhuy/1565921286179-arsi.png";
+    const url = s3.getSignedUrl("getObject", options);
+    // const url =
+    //   "http://d31dnmp7lgwbvu.cloudfront.net/frmnjn/uhuy/1565921286179-arsi.png";
+    console.log("url", url);
+    res.redirect(302, url);
+  }
 
-    res.redirect(url);
+  downloadallfiles(req, res) {
+    res.set("content-type", "application/zip"); // optional
+    zipper.streamZipDataTo(
+      {
+        pipe: res,
+        folderName: req.params.username + "/" + req.params.folder,
+        // startKey: "keyOfLastFileIZipped", // could keep null
+        recursive: true
+      },
+      function(err, result) {
+        if (err) console.error(err);
+        else {
+          console.log(result);
+        }
+      }
+    );
+    // response.download();
+  }
+
+  deletefile(req, res) {
+    var params = {
+      Bucket: "frmnjn-filedrop",
+      Key: req.body.Key
+    };
+
+    s3.deleteObject(params, function(err, data) {
+      if (err) console.log(err, err.stack);
+      else {
+        console.log(data);
+        res.json({ success: true, data: data });
+      }
+    });
+  }
+
+  deleteAllfiles(req, res) {
+    var params = {
+      Bucket: "frmnjn-filedrop",
+      // Key: req.body.Key,
+      Prefix: "frmnjn/lalala/"
+    };
+
+    s3.deleteObject(params, function(err, data) {
+      if (err) console.log(err, err.stack);
+      else {
+        console.log(data);
+        res.json({ success: true, data: data });
+      }
+    });
   }
 }
 
@@ -245,12 +297,16 @@ function main() {
     })
   );
   app.use(bodyParser.json());
-  app.use(cors());
+  app.use(
+    cors({
+      exposedHeaders: "*"
+    })
+  );
 
   var upload = multer({
     storage: multerS3({
       s3: s3,
-      bucket: "halohalohalo",
+      bucket: "frmnjn-filedrop",
       acl: "public-read",
       contentType: multerS3.AUTO_CONTENT_TYPE,
       metadata: function(req, file, cb) {
@@ -303,7 +359,10 @@ function main() {
   app.post("/getdroplinks", handlers.getdroplinks);
   app.post("/getlistfiles", handlers.getlistfiles);
   app.post("/editaccount", handlers.editaccount);
-  app.get("/test", handlers.test);
+  app.post("/downloadsinglefile", handlers.downloadsinglefile);
+  app.post("/downloadallfiles", handlers.downloadallfiles);
+  app.delete("/deletefile", handlers.deletefile);
+  app.delete("/deleteallfiles", handlers.deleteAllfiles);
   app.post(
     "/uploadmultiple",
     uploadLocal.array("file", 12),
@@ -318,6 +377,8 @@ function main() {
       res.send(files);
     }
   );
+
+  app.get("/download/:username/:folder", handlers.downloadallfiles);
 
   app.listen(port, () => console.log(`Server is listening on port: ${port}`));
 }
