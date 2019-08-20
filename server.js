@@ -11,6 +11,7 @@ let jwt = require("jsonwebtoken");
 let config = require("./config");
 let middleware = require("./middleware");
 var s3 = new AWS.S3();
+var dynamodb = new AWS.DynamoDB.DocumentClient({ region: "ap-southeast-1" });
 var S3Zipper = require("aws-s3-zipper");
 var zipper = new S3Zipper({ bucket: "frmnjn-filedrop" });
 
@@ -140,6 +141,57 @@ class HandlerGenerator {
     );
   }
 
+  createdroplinkdynamodb(req, res) {
+    var ownerUsername = req.body.ownerUsername;
+    var droplinkName = req.body.droplinkName;
+    var droplinkId = Date.now() + "_" + ownerUsername;
+    // var params = {
+    //   Item: {
+    //     droplinkId: { S: droplinkId },
+    //     ownerUsername: {
+    //       S: ownerUsername
+    //     },
+    //     droplinkName: {
+    //       S: droplinkName
+    //     }
+    //   },
+    //   ReturnConsumedCapacity: "TOTAL",
+    //   TableName: "filedrop.droplinks"
+    // };
+    // dynamodb.put(params, function(err, data) {
+    //   if (err) {
+    //     console.log(err, err.stack);
+    //   } else {
+    //     console.log(data);
+    //     res.json(data);
+    //   }
+    // });
+    var table = "filedrop.droplinks";
+
+    var params = {
+      TableName: "filedrop.droplinks",
+      Item: {
+        droplinkId: droplinkId,
+        ownerUsername: ownerUsername,
+        droplinkName: droplinkName
+      },
+      ReturnConsumedCapacity: "TOTAL"
+    };
+
+    console.log("Adding a new item...");
+    dynamodb.put(params, function(err, data) {
+      if (err) {
+        console.error(
+          "Unable to add item. Error JSON:",
+          JSON.stringify(err, null, 2)
+        );
+      } else {
+        console.log("Put Item success!");
+        res.json(data);
+      }
+    });
+  }
+
   deletedroplink(req, res) {
     let id = req.body.id;
     let ownerUsername = req.body.ownerUsername;
@@ -188,6 +240,57 @@ class HandlerGenerator {
     });
   }
 
+  deletedroplinkdynamodb(req, res) {
+    let droplinkId = req.body.droplinkId;
+
+    var params = {
+      Bucket: "frmnjn-filedrop",
+      Prefix: req.body.ownerUsername + "/" + req.body.droplinkName + "/"
+    };
+
+    s3.listObjects(params, function(err, data) {
+      if (err) {
+        res.json({
+          data: err.message,
+          success: false
+        });
+      } else {
+        if (data.Contents.length != 0) {
+          res.json({
+            success: false,
+            message: "delete droplink failed, data exists"
+          });
+        } else {
+          // delete droplink from dynamodb
+          var params = {
+            TableName: "filedrop.droplinks",
+            Key: {
+              droplinkId: droplinkId
+            }
+          };
+          dynamodb.delete(params, function(err, data) {
+            if (err) {
+              console.error(
+                "Unable to delete item. Error JSON:",
+                JSON.stringify(err, null, 2)
+              );
+            } else {
+              console.log(
+                "DeleteItem succeeded:",
+                JSON.stringify(data, null, 2)
+              );
+              // console.log("DeleteItem succeeded:", JSON.stringify(data));
+              res.json({
+                success: true,
+                message: "Delete Droplink Success!"
+              });
+            }
+          });
+        }
+      }
+    });
+  }
+
   checkdroplink(req, res) {
     let username = req.body.ownerUsername;
     let folder = req.body.droplink;
@@ -209,6 +312,37 @@ class HandlerGenerator {
         }
       }
     );
+  }
+
+  checkdroplinkdynamodb(req, res) {
+    let ownerUsername = req.body.ownerUsername;
+    let droplinkName = req.body.droplinkName;
+    var params = {
+      TableName: "filedrop.droplinks",
+      ProjectionExpression: "#ou, droplinkId, droplinkName",
+      FilterExpression: "#ou = :ownerUsername AND #dn = :droplinkName",
+      ExpressionAttributeNames: {
+        "#ou": "ownerUsername",
+        "#dn": "droplinkName"
+      },
+      ExpressionAttributeValues: {
+        ":ownerUsername": ownerUsername,
+        ":droplinkName": droplinkName
+      }
+    };
+
+    dynamodb.scan(params, function(err, data) {
+      if (err) {
+        console.log(err, err.stack);
+        res.json({ success: false, message: err });
+      } else {
+        if (data.Count == 0) {
+          res.json({ success: false });
+        } else {
+          res.json({ success: true });
+        }
+      }
+    });
   }
 
   getdroplinks(req, res) {
@@ -233,6 +367,31 @@ class HandlerGenerator {
         }
       }
     );
+  }
+
+  getdroplinksdynamodb(req, res) {
+    let ownerUsername = req.body.ownerUsername;
+    var params = {
+      TableName: "filedrop.droplinks",
+      ProjectionExpression: "#ou, droplinkId, droplinkName",
+      FilterExpression: "#ou = :ownerUsername",
+      ExpressionAttributeNames: {
+        "#ou": "ownerUsername"
+      },
+      ExpressionAttributeValues: {
+        ":ownerUsername": ownerUsername
+      }
+    };
+
+    dynamodb.scan(params, function(err, data) {
+      if (err) {
+        console.log(err, err.stack);
+        res.json({ success: false, message: err });
+      } else {
+        console.log(data);
+        res.json(data);
+      }
+    });
   }
 
   getlistfiles(req, res) {
@@ -421,6 +580,10 @@ function main() {
     });
   });
   app.post("/createdroplink", handlers.createdroplink);
+  app.post("/createdroplinkdynamodb", handlers.createdroplinkdynamodb);
+  app.post("/getdroplinksdynamodb", handlers.getdroplinksdynamodb);
+  app.post("/checkdroplinkdynamodb", handlers.checkdroplinkdynamodb);
+  app.delete("/deletedroplinkdynamodb", handlers.deletedroplinkdynamodb);
   app.delete("/deletedroplink", handlers.deletedroplink);
   app.post("/getdroplinks", handlers.getdroplinks);
   app.post("/getlistfiles", handlers.getlistfiles);
