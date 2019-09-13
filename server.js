@@ -18,7 +18,7 @@ var zipper = new S3Zipper({ bucket: "frmnjn-filedrop" });
 var connection = mysql.createConnection({
   host: "localhost",
   user: "root",
-  password: "",
+  password: "barcelona",
   database: "filedrop"
 });
 
@@ -397,7 +397,7 @@ class HandlerGenerator {
   getlistfiles(req, res) {
     var params = {
       Bucket: "frmnjn-filedrop",
-      Prefix: req.body.username + "/" + req.body.folder + "/"
+      Prefix: req.body.username + "/" + req.body.droplinkName + "/"
     };
 
     console.log(params);
@@ -539,6 +539,9 @@ function main() {
       key: function(req, file, cb) {
         cb(
           null,
+          // "cognito/filedrop/" +
+          //   req.params.subIdentity +
+          //   "/" +
           req.params.username +
             "/" +
             req.params.dropLink +
@@ -573,20 +576,21 @@ function main() {
     res,
     next
   ) {
+    console.log(req.files);
     //res.send('Successfully uploaded ' + req.files.length + ' files! '+res)
     res.json({
       success: true,
       data: req.files
     });
   });
-  app.post("/createdroplink", handlers.createdroplink);
+  app.post("/createdroplink", handlers.createdroplink); //udah
   app.post("/createdroplinkdynamodb", handlers.createdroplinkdynamodb);
   app.post("/getdroplinksdynamodb", handlers.getdroplinksdynamodb);
-  app.post("/checkdroplinkdynamodb", handlers.checkdroplinkdynamodb);
+  app.post("/checkdroplinkdynamodb", handlers.checkdroplinkdynamodb); //udah
   app.delete("/deletedroplinkdynamodb", handlers.deletedroplinkdynamodb);
   app.delete("/deletedroplink", handlers.deletedroplink);
-  app.post("/getdroplinks", handlers.getdroplinks);
-  app.post("/getlistfiles", handlers.getlistfiles);
+  app.post("/getdroplinks", handlers.getdroplinks); //udah
+  app.post("/getlistfiles", handlers.getlistfiles); //udah
   app.post("/editaccount", handlers.editaccount);
   app.post("/downloadsinglefile", handlers.downloadsinglefile);
   app.post("/downloadallfiles", handlers.downloadallfiles);

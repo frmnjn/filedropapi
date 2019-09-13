@@ -1,0 +1,16 @@
+Guest 
+1. Register--------------DONE
+2. Login-----------------DONE
+3. Drop File-------------DONE
+4. Kirim Notifikasi------NOT DONE
+
+Member
+1. Logout----------------DONE
+2. Edit Akun-------------DONE
+3. Buat Link Drop File---DONE
+4. Lihat Link Drop File--DONE
+5. Hapus Link Drop File--NOT DONE
+6. Lihat Daftar File-----DONE
+7. Hapus File------------NOT DONE
+8. Unduh File------------NOT DONE
+9. Unduh Semua File------NOT DONE
